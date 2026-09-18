@@ -1,0 +1,44 @@
+spring:
+  application:
+    name: outbox
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payments
+    username: app
+    password: app
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      client-id: ${spring.application.name}
+      acks: all
+      retries: 3
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+    consumer:
+      group-id: group-id-transaction
+      client-id: ${spring.application.name}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      ack-mode: manual
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+
+topic:
+  transaction: transactions.events
+
+chunk:
+  value: 1000
