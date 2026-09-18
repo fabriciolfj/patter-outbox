@@ -5,7 +5,8 @@ import java.util.ResourceBundle;
 public enum ErrorEnum {
 
     BUSINESS_MESSAGE,
-    VALIDATION_MESSAGE;
+    VALIDATION_MESSAGE,
+    DUPLICATE_TRANSACTION_MESSAGE;
 
 
     public String getMessage() {

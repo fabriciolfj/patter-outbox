@@ -12,14 +12,17 @@ public class BusinessException extends RuntimeException implements ErrorResponse
     private final ProblemDetail body;
 
     public BusinessException() {
-        var message = BUSINESS_MESSAGE.getMessage();
+        this(BUSINESS_MESSAGE.getMessage(), HttpStatus.UNPROCESSABLE_CONTENT);
+    }
+
+    public BusinessException(final String message, final HttpStatus status) {
         super(message);
-        this.body = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_CONTENT, message);
+        this.body = ProblemDetail.forStatusAndDetail(status, message);
     }
 
     @Override
     public HttpStatusCode getStatusCode() {
-        return HttpStatus.UNPROCESSABLE_CONTENT;
+        return HttpStatus.valueOf(body.getStatus());
     }
 
     @Override

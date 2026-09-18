@@ -11,14 +11,19 @@ import com.github.fabriciolfj.outbox.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import static com.github.fabriciolfj.outbox.exception.ErrorEnum.DUPLICATE_TRANSACTION_MESSAGE;
 
 @Slf4j
 @Service
 public class TransactionService {
 
     private static final String EVENT_TYPE_CREATED = "TransactionCreated";
+    private static final String EXTERNAL_ID_CONSTRAINT = "uk_transactions_external_id";
 
     private final TransactionRepository transactionRepository;
     private final OutboxRepository outboxRepository;
@@ -41,23 +46,17 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse create(final TransactionRequest request) {
-        final TransactionEntity transaction = persist(request);
-
-        outboxRepository.save(outboxMapper.toOutboxEntity(transaction, EVENT_TYPE_CREATED, topic));
-        log.info("outbox saved {}", transaction.getId());
-
-        return transactionMapper.toResponse(transaction);
-    }
-
-    private @NonNull TransactionEntity persist(TransactionRequest request) {
         try {
-            final TransactionEntity transaction = transactionRepository.save(transactionMapper.toEntity(request));
+            final TransactionEntity transaction = transactionRepository.saveAndFlush(transactionMapper.toEntity(request));
             log.info("transaction saved {}", transaction.getId());
-            return transaction;
-        } catch (VIO e) {
-            log.error("Error saving transaction", e);
-            throw new BusinessException();
-        }
 
+            outboxRepository.save(outboxMapper.toOutboxEntity(transaction, EVENT_TYPE_CREATED, topic));
+            log.info("outbox saved {}", transaction.getId());
+
+            return transactionMapper.toResponse(transaction);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("duplicate transaction for externalId {}", request.externalId());
+            throw new BusinessException(DUPLICATE_TRANSACTION_MESSAGE.getMessage(), HttpStatus.CONFLICT);
+        }
     }
 }
