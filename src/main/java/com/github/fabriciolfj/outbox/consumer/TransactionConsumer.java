@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TransactionConsumer {
 
-    @KafkaListener(topics = {"topic.transaction"}, groupId = "spring.kafka.consumer.groupId")
+    @KafkaListener(topics = "${topic.transaction}")
     public void receive(final String json, final Acknowledgment ack) {
         try {
             log.info("message receive {}", json);
