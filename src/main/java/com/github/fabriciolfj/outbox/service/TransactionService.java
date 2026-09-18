@@ -3,11 +3,13 @@ package com.github.fabriciolfj.outbox.service;
 import com.github.fabriciolfj.outbox.dto.TransactionRequest;
 import com.github.fabriciolfj.outbox.dto.TransactionResponse;
 import com.github.fabriciolfj.outbox.entity.TransactionEntity;
+import com.github.fabriciolfj.outbox.exception.BusinessException;
 import com.github.fabriciolfj.outbox.mapper.OutboxMapper;
 import com.github.fabriciolfj.outbox.mapper.TransactionMapper;
 import com.github.fabriciolfj.outbox.repository.OutboxRepository;
 import com.github.fabriciolfj.outbox.repository.TransactionRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,12 +41,23 @@ public class TransactionService {
 
     @Transactional
     public TransactionResponse create(final TransactionRequest request) {
-        final TransactionEntity transaction = transactionRepository.save(transactionMapper.toEntity(request));
-        log.info("transaction saved {}", transaction.getId());
+        final TransactionEntity transaction = persist(request);
 
         outboxRepository.save(outboxMapper.toOutboxEntity(transaction, EVENT_TYPE_CREATED, topic));
         log.info("outbox saved {}", transaction.getId());
 
         return transactionMapper.toResponse(transaction);
+    }
+
+    private @NonNull TransactionEntity persist(TransactionRequest request) {
+        try {
+            final TransactionEntity transaction = transactionRepository.save(transactionMapper.toEntity(request));
+            log.info("transaction saved {}", transaction.getId());
+            return transaction;
+        } catch (VIO e) {
+            log.error("Error saving transaction", e);
+            throw new BusinessException();
+        }
+
     }
 }
